@@ -16,3 +16,12 @@ This repository contains homework assignments and datasets for the course.
 - `HW2_Notebook.ipynb` — assignment notebook (complete all work here)
 - `cardiac_patients.csv` — hospital dataset (2000 patients, features + referral decisions)
 - `cardiac_truth.csv` — released at Step 5; load when instructed
+
+### Homework 3: Networks, Rankings, and Academic Prestige
+- **Released:** March 15, 2026
+- **Folder:** [HW3/](HW3/)
+- `HW3_Notebook.ipynb` — assignment notebook (complete all work here)
+- `cs_hiring_edges.csv` — CS faculty hiring network (edges)
+- `cs_hiring_nodes.csv` — CS institutions with US News rankings
+- `biz_hiring_edges.csv` — Business faculty hiring network (edges)
+- `biz_hiring_nodes.csv` — Business institutions with US News rankings
