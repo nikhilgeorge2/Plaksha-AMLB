@@ -23,11 +23,10 @@ from wiki_tool import get_links
 
 # ── API key — read from file, never hardcode ──────────────────────────────────
 _API_KEY_PATH = os.path.expanduser("~/gemini_api_key.txt")
-try:
-    with open(_API_KEY_PATH) as f:
-        _API_KEY = f.read().strip()
-except FileNotFoundError:
-    _API_KEY = ""
+with open(_API_KEY_PATH) as f:
+    _API_KEY = f.read().strip()
+if not _API_KEY:
+    raise RuntimeError("~/gemini_api_key.txt is empty. Put your Gemini key on one line.")
 
 _GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
@@ -46,8 +45,6 @@ _STOP = {
 
 
 def _ask_gemini(prompt: str) -> str:
-    if not _API_KEY:
-        raise RuntimeError("Missing Gemini API key at ~/gemini_api_key.txt")
     body = json.dumps({"contents": [{"parts": [{"text": prompt}]}]}).encode("utf-8")
     req = urllib.request.Request(
         _GEMINI_URL,
