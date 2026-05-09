@@ -12,33 +12,56 @@ Notes:
 - Only article links are returned (no categories, talk pages, etc.).
 """
 
-import json, time, urllib.error, urllib.parse, urllib.request
+import gzip, json, threading, time, urllib.error, urllib.parse, urllib.request
 from typing import Dict, List
 
 _API_URL    = "https://en.wikipedia.org/w/api.php"
 _BASE_URL   = "https://en.wikipedia.org"
-_USER_AGENT = "WikipediaAgentGame/1.0 (university course project)"
+_USER_AGENT = "WikipediaAgentGame/1.0 (university course project; nikhil.george@plaksha.edu.in)"
 _DELAY      = 0.6
+_MAX_RETRIES = 3
 
 _cache: Dict[str, List[Dict[str, str]]] = {}
 _last_request: float = 0.0
+_rate_lock = threading.Lock()
 
 
 def _wait():
     global _last_request
-    elapsed = time.time() - _last_request
-    if elapsed < _DELAY:
-        time.sleep(_DELAY - elapsed)
-    _last_request = time.time()
+    with _rate_lock:
+        elapsed = time.time() - _last_request
+        if elapsed < _DELAY:
+            time.sleep(_DELAY - elapsed)
+        _last_request = time.time()
 
 
 def _api_get(params: dict) -> dict:
-    _wait()
     params["format"] = "json"
     url = _API_URL + "?" + urllib.parse.urlencode(params)
-    req = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
-    with urllib.request.urlopen(req, timeout=20) as r:
-        return json.loads(r.read().decode("utf-8"))
+    req = urllib.request.Request(url, headers={
+        "User-Agent":      _USER_AGENT,
+        "Accept-Encoding": "gzip",
+    })
+    for attempt in range(_MAX_RETRIES):
+        _wait()
+        t0 = time.time()
+        try:
+            with urllib.request.urlopen(req, timeout=20) as r:
+                raw = r.read()
+                if r.headers.get("Content-Encoding") == "gzip":
+                    raw = gzip.decompress(raw)
+                data = json.loads(raw.decode("utf-8"))
+            elapsed = time.time() - t0
+            if elapsed > 1.0:
+                time.sleep(5.0)  # slow response — back off per bot policy
+            return data
+        except urllib.error.HTTPError as e:
+            if e.code == 429:
+                retry_after = int(e.headers.get("Retry-After", 5))
+                time.sleep(retry_after)
+            else:
+                raise
+    raise urllib.error.HTTPError(url, 429, "Rate limited after retries", {}, None)
 
 
 def _url_to_title(url: str) -> str:

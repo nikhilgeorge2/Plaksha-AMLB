@@ -14,7 +14,7 @@ results = solve_all(pairs, deadline)
 
 You do not know in advance how many pairs you will be evaluated on. Your agent must manage its own time.
 
-**Scoring:** each pair scores `max(0, 15 − steps)` if the target is reached, else 0. A path completed in 1 step scores 14, in 14 steps scores 1, in 15 or more steps scores 0. Pairs where the target is not reached score 0. You will be evaluated on **3 test sets of different sizes** (roughly 10, 15, and 20 pairs) — your agent must work well regardless of how many pairs it receives. Your final agent score is the total across all three sets.
+**Scoring:** each pair scores `max(0, 15 − steps)` if the target is reached, else 0. A path completed in 1 step scores 14, in 14 steps scores 1, in 15 or more steps scores 0. Pairs where the target is not reached score 0. You will be evaluated on **3 test sets of different sizes** (roughly 10, 15, and 25 pairs) — your agent must work well regardless of how many pairs it receives. Your final agent score is the total across all three sets.
 
 **Grading:** your agent score counts for **70%** of the homework grade, evaluated on a curve relative to the class — you are not penalized for the problem being hard, only for how you do relative to your peers. The remaining **30%** is a written reflection (see below).
 

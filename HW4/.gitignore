@@ -1,0 +1,26 @@
+# Grading infrastructure — never push
+grade_all.py
+grade_sets.py
+run_one_agent.py
+GRADING_INSTRUCTIONS.md
+eval_plan.json
+final_scores.json
+round2_scores.json
+round3_scores.json
+avishkar_devyansh_scores.json
+grades_round1_run1.json
+grades_round1_run2.json
+avishkar_rerun.log
+grade_run*.log
+round2_run.log
+round3_run.log
+test_set_*.csv
+round2_set_*.csv
+round3_set_*.csv
+# test_pairs_round2.csv is public (released after grading)
+test_pairs_round1.csv
+test_pairs_round3.csv
+__pycache__/
+
+# Student submissions — never push
+submissions/

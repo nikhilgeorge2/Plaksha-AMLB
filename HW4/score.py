@@ -9,7 +9,7 @@ Each pair scores max(0, 15 - steps) if the target is reached, else 0.
 The instructor runs this same script against the secret test pairs.
 """
 
-import argparse, csv, importlib.util, json, multiprocessing, os, sys, time
+import argparse, csv, importlib.util, json, os, sys, threading, time
 
 _OFFICIAL_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _OFFICIAL_DIR)
@@ -20,38 +20,52 @@ _SCORE_BASE   = 15    # score per pair = max(0, _SCORE_BASE - steps)
 _TIME_LIMIT   = 120   # 2 minutes total for all pairs
 
 
-# ── subprocess worker ─────────────────────────────────────────────────────────
-
-def _worker(module_path, pairs, official_dir, deadline, q):
-    import importlib.util, sys, os
-    sys.path.insert(0, official_dir)
-    agent_dir = os.path.dirname(os.path.abspath(module_path))
-    if agent_dir != official_dir:
-        sys.path.append(agent_dir)
-    spec = importlib.util.spec_from_file_location("agent", module_path)
-    mod  = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    q.put(mod.solve_all(pairs, deadline))
-
-
 def run_agent(module_path, pairs, official_dir):
-    """Run solve_all() in a subprocess with a hard 2-minute kill."""
-    deadline = time.time() + _TIME_LIMIT
-    q = multiprocessing.Queue()
-    p = multiprocessing.Process(
-        target=_worker,
-        args=(module_path, pairs, official_dir, deadline, q)
-    )
-    p.start()
-    p.join(timeout=_TIME_LIMIT + 5)   # +5s grace for cleanup
-    if p.is_alive():
-        p.terminate()
-        p.join()
-        return None, "timeout"
+    """Run solve_all() in a thread with a hard 2-minute timeout.
+
+    Runs in the same process (no subprocess spawn overhead) and sets the
+    working directory to official_dir so relative paths like ./gemini_api_key.txt
+    resolve correctly for all submissions.
+    """
+    orig_dir = os.getcwd()
+    os.chdir(official_dir)
+
+    if official_dir not in sys.path:
+        sys.path.insert(0, official_dir)
+    agent_dir = os.path.dirname(os.path.abspath(module_path))
+    if agent_dir not in sys.path and agent_dir != official_dir:
+        sys.path.append(agent_dir)
+
+    spec = importlib.util.spec_from_file_location("student_agent", module_path)
+    mod  = importlib.util.module_from_spec(spec)
     try:
-        return q.get_nowait(), "ok"
-    except Exception:
+        spec.loader.exec_module(mod)
+    except Exception as e:
+        os.chdir(orig_dir)
+        print(f"  ✗ Import error: {e}")
         return None, "error"
+
+    deadline     = time.time() + _TIME_LIMIT
+    result_box   = [None]
+    error_box    = [None]
+
+    def _run():
+        try:
+            result_box[0] = mod.solve_all(pairs, deadline)
+        except Exception as e:
+            error_box[0] = str(e)
+
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+    t.join(timeout=_TIME_LIMIT + 5)
+    os.chdir(orig_dir)
+
+    if t.is_alive():
+        return None, "timeout"
+    if error_box[0]:
+        print(f"  ✗ Runtime error: {error_box[0]}")
+        return None, "error"
+    return result_box[0], "ok"
 
 
 # ── validation ────────────────────────────────────────────────────────────────
@@ -186,5 +200,4 @@ def main():
 
 
 if __name__ == "__main__":
-    multiprocessing.set_start_method("spawn", force=True)
     main()
